@@ -1,57 +1,67 @@
 # PokeLite
 
-PokeLite is an experimental, 100% Java client shell intended to provide a RuneLite-style desktop and plugin experience around the official PokeMMO client.
+PokeLite is a 100% Java 17 desktop shell that launches the official PokeMMO client and presents it inside a RuneLite-inspired interface.
 
-## Current prototype
+## Current milestone
 
-This initial import contains:
+The current client includes:
 
-- a Java launcher that locates and starts `PokeMMO.exe` or `PokeMMO.sh` from the local `poke` directory;
-- an experimental same-JVM class-loader path with external-launch fallback;
-- the official PokeMMO Java entry point, `com.pokeemu.client.Client`;
-- a minimal Java plugin contract;
-- recursive plugin class discovery;
-- a sample logging plugin.
+- a dark Swing desktop shell with a central game area;
+- a right-side RuneLite-style navigation rail;
+- collapsible Plugins, Settings, and Logs panels;
+- persistent plugin enable/disable state;
+- classpath and external JAR plugin discovery through `ServiceLoader`;
+- official PokeMMO process launching from `poke/`;
+- Windows child-window hosting and automatic resize through JNA;
+- safe separate-window fallback when embedding is unavailable.
 
 ## Required local layout
 
-Place the complete PokeMMO installation inside `PokeLite/poke/`:
+PokeMMO files are intentionally excluded from Git.
 
 ```text
 PokeLite/
-├── Client.java
-├── ClientPlugin.java
-├── plugins/
+├── build.gradle
+├── settings.gradle
+├── src/
+├── plugins/             optional external PokeLite plugin JARs
 └── poke/
     ├── PokeMMO.exe
-    ├── PokeMMO.sh
     ├── data/
     ├── roms/
-    └── other PokeMMO files
+    └── other official PokeMMO files
 ```
 
-On Windows, PokeLite defaults to:
+## Run from IntelliJ IDEA
+
+1. Open the repository as a Gradle project.
+2. Use Java 17 as the project SDK and Gradle JVM.
+3. Run the Gradle `run` task, or create an Application configuration with:
 
 ```text
-PokeLite\poke\PokeMMO.exe
+Main class: dev.kspog.pokelite.PokeLite
+Working directory: repository root
+Module classpath: PokeLite.main
 ```
 
-The PokeMMO working directory is set to `PokeLite/poke/` when the official client is launched.
-
-## Important status
-
-This repository is an early prototype. The client integration, plugin API, desktop interface, build system, overlays, configuration framework, event bus, and compatibility safeguards still require a full redesign before production use.
-
-No PokeMMO game files, ROMs, credentials, or proprietary client assets are included in this repository.
-
-## Prototype compilation
-
-From the repository root:
+## Run with Gradle
 
 ```bash
-javac -d . Client.java ClientPlugin.java
-javac -cp . -d plugins plugins/pokemmo/plugins/SamplePlugin.java
-java pokemmo.Client
+gradle run
 ```
 
-A standard Gradle multi-module structure will replace this manual compilation flow in a later milestone.
+## External plugin contract
+
+External plugin JARs go in `plugins/` and implement:
+
+```text
+dev.kspog.pokelite.plugin.PokeLitePlugin
+```
+
+Each plugin JAR must provide the matching `META-INF/services` provider entry.
+
+## Status
+
+This is still an early integration milestone. It provides the client shell and native Windows hosting layer, but it does not yet expose PokeMMO game state, game events, widgets, or automation APIs.
+
+No PokeMMO game files, ROMs, credentials, or proprietary client assets are included.
