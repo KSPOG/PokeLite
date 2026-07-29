@@ -16,6 +16,7 @@ build/
 *.log
 
 # Local PokeMMO installation and proprietary assets
+poke/
 PokeMMO.exe
 PokeMMO.sh
 libs/
