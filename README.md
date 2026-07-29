@@ -6,17 +6,43 @@ PokeLite is an experimental, 100% Java client shell intended to provide a RuneLi
 
 This initial import contains:
 
-- a Java launcher that locates and starts `PokeMMO.exe` or `PokeMMO.sh`;
+- a Java launcher that locates and starts `PokeMMO.exe` or `PokeMMO.sh` from the local `poke` directory;
 - an experimental same-JVM class-loader path with external-launch fallback;
+- the official PokeMMO Java entry point, `com.pokeemu.client.Client`;
 - a minimal Java plugin contract;
 - recursive plugin class discovery;
 - a sample logging plugin.
+
+## Required local layout
+
+Place the complete PokeMMO installation inside `PokeLite/poke/`:
+
+```text
+PokeLite/
+├── Client.java
+├── ClientPlugin.java
+├── plugins/
+└── poke/
+    ├── PokeMMO.exe
+    ├── PokeMMO.sh
+    ├── data/
+    ├── roms/
+    └── other PokeMMO files
+```
+
+On Windows, PokeLite defaults to:
+
+```text
+PokeLite\poke\PokeMMO.exe
+```
+
+The PokeMMO working directory is set to `PokeLite/poke/` when the official client is launched.
 
 ## Important status
 
 This repository is an early prototype. The client integration, plugin API, desktop interface, build system, overlays, configuration framework, event bus, and compatibility safeguards still require a full redesign before production use.
 
-No PokeMMO game files, ROMs, credentials, or proprietary client assets are included.
+No PokeMMO game files, ROMs, credentials, or proprietary client assets are included in this repository.
 
 ## Prototype compilation
 
