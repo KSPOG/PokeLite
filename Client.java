@@ -13,17 +13,20 @@ import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
-import java.util.jar.JarFile;
-import java.util.jar.Manifest;
 
 public class Client {
     private static final Logger LOGGER = createLogger();
+
+    private static final String GAME_DIRECTORY_NAME = "poke";
+    private static final String WINDOWS_CLIENT_NAME = "PokeMMO.exe";
+    private static final String UNIX_LAUNCHER_NAME = "PokeMMO.sh";
+    private static final String POKEMMO_MAIN_CLASS = "com.pokeemu.client.Client";
 
     private final List<ClientPlugin> plugins = new ArrayList<ClientPlugin>();
     private final File gamePath;
 
     private URLClassLoader injectionLoader;
-    private File injectedJar;
+    private File injectedArchive;
 
     public Client(File gamePath) {
         this.gamePath = gamePath != null ? gamePath : defaultGamePath();
@@ -44,14 +47,26 @@ public class Client {
     }
 
     private static File defaultGamePath() {
-        File root = new File("").getAbsoluteFile();
-        File windowsExecutable = new File(root, "PokeMMO.exe");
+        File projectRoot = new File("").getAbsoluteFile();
+        File gameDirectory = new File(projectRoot, GAME_DIRECTORY_NAME);
+        File windowsExecutable = new File(gameDirectory, WINDOWS_CLIENT_NAME);
+        File unixLauncher = new File(gameDirectory, UNIX_LAUNCHER_NAME);
 
         if (windowsExecutable.isFile()) {
             return windowsExecutable;
         }
 
-        return new File(root, "PokeMMO.sh");
+        if (unixLauncher.isFile()) {
+            return unixLauncher;
+        }
+
+        return isWindows() ? windowsExecutable : unixLauncher;
+    }
+
+    private static boolean isWindows() {
+        return System.getProperty("os.name", "")
+            .toLowerCase()
+            .contains("win");
     }
 
     public static Logger getLogger() {
@@ -119,16 +134,16 @@ public class Client {
     }
 
     public void prepareInjection(File pluginDirectory) {
-        File gameJar = findGameJar();
-        if (gameJar == null) {
-            LOGGER.fine("No candidate game JAR found; external launch will be used");
+        File gameArchive = findGameArchive();
+        if (gameArchive == null) {
+            LOGGER.fine("PokeMMO.exe was not found; external launch will be used");
             return;
         }
 
         List<URL> urls = new ArrayList<URL>();
 
         try {
-            urls.add(gameJar.toURI().toURL());
+            urls.add(gameArchive.toURI().toURL());
 
             File directory = pluginDirectory != null ? pluginDirectory : new File("plugins");
             if (directory.isDirectory()) {
@@ -139,48 +154,30 @@ public class Client {
                 urls.toArray(new URL[0]),
                 Client.class.getClassLoader()
             );
-            injectedJar = gameJar;
+            injectedArchive = gameArchive;
         } catch (MalformedURLException exception) {
             LOGGER.log(Level.WARNING, "Failed to prepare experimental client loading", exception);
         }
     }
 
-    private File findGameJar() {
-        File parentDirectory = gamePath.getAbsoluteFile().getParentFile();
-        File gameJar = searchJar(parentDirectory);
-
-        if (gameJar == null && parentDirectory != null) {
-            gameJar = searchJar(new File(parentDirectory, "libs"));
+    private File findGameArchive() {
+        if (gamePath.isFile() && WINDOWS_CLIENT_NAME.equalsIgnoreCase(gamePath.getName())) {
+            return gamePath;
         }
 
-        return gameJar;
-    }
-
-    private static File searchJar(File directory) {
-        if (directory == null || !directory.isDirectory()) {
+        File installationDirectory = gamePath.getAbsoluteFile().getParentFile();
+        if (installationDirectory == null) {
             return null;
         }
 
-        File[] files = directory.listFiles();
-        if (files == null) {
-            return null;
-        }
-
-        for (File file : files) {
-            if (file.isFile()
-                && file.getName().endsWith(".jar")
-                && !"jrt-fs.jar".equals(file.getName())) {
-                return file;
-            }
-        }
-
-        return null;
+        File siblingExecutable = new File(installationDirectory, WINDOWS_CLIENT_NAME);
+        return siblingExecutable.isFile() ? siblingExecutable : null;
     }
 
     public void run() throws IOException {
-        if (injectionLoader != null && injectedJar != null) {
+        if (injectionLoader != null && injectedArchive != null) {
             try {
-                runFromJar();
+                runFromArchive();
                 return;
             } catch (Exception exception) {
                 LOGGER.log(
@@ -194,30 +191,24 @@ public class Client {
         launchExternalClient();
     }
 
-    private void runFromJar() throws Exception {
-        LOGGER.info("Attempting experimental same-JVM launch from: " + injectedJar);
+    private void runFromArchive() throws Exception {
+        LOGGER.info("Attempting experimental same-JVM launch from: " + injectedArchive);
         Thread.currentThread().setContextClassLoader(injectionLoader);
 
-        try (JarFile jarFile = new JarFile(injectedJar)) {
-            Manifest manifest = jarFile.getManifest();
-            if (manifest == null) {
-                throw new IllegalStateException("JAR manifest is missing");
-            }
-
-            String mainClassName = manifest.getMainAttributes().getValue("Main-Class");
-            if (mainClassName == null || mainClassName.isBlank()) {
-                throw new IllegalStateException("Main-Class is missing from the JAR manifest");
-            }
-
-            Class<?> mainClass = Class.forName(mainClassName, true, injectionLoader);
-            Method mainMethod = mainClass.getMethod("main", String[].class);
-            mainMethod.invoke(null, (Object) new String[0]);
-        }
+        Class<?> mainClass = Class.forName(POKEMMO_MAIN_CLASS, true, injectionLoader);
+        Method mainMethod = mainClass.getMethod("main", String[].class);
+        mainMethod.invoke(null, (Object) new String[0]);
     }
 
     private void launchExternalClient() throws IOException {
         if (!gamePath.isFile()) {
-            throw new IOException("PokeMMO launcher was not found: " + gamePath.getAbsolutePath());
+            throw new IOException(
+                "PokeMMO launcher was not found: "
+                    + gamePath.getAbsolutePath()
+                    + ". Place the PokeMMO installation in the '"
+                    + GAME_DIRECTORY_NAME
+                    + "' directory."
+            );
         }
 
         LOGGER.info("Launching official PokeMMO client from: " + gamePath);
