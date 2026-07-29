@@ -1,0 +1,33 @@
+plugins {
+    id 'application'
+    id 'java'
+}
+
+group = 'dev.kspog'
+version = '0.2.0'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+dependencies {
+    implementation 'net.java.dev.jna:jna-platform:5.19.1'
+}
+
+application {
+    mainClass = 'dev.kspog.pokelite.PokeLite'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.named('run') {
+    workingDir = project.projectDir
+}
