@@ -1,4 +1,4 @@
-# Java build output
+# Java and Gradle build output
 *.class
 *.jar
 out/
@@ -7,6 +7,7 @@ build/
 
 # IDE files
 .idea/
+.run/
 *.iml
 .classpath
 .project
@@ -14,6 +15,10 @@ build/
 
 # Logs
 *.log
+logs/
+
+# Local PokeLite plugin packages
+plugins/
 
 # Local PokeMMO installation and proprietary assets
 poke/
