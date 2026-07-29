@@ -1,5 +1,6 @@
 package dev.kspog.pokelite.plugin;
 
+import dev.kspog.pokelite.api.PluginContext;
 import dev.kspog.pokelite.plugin.builtin.ClientStatusPlugin;
 
 import java.io.IOException;
@@ -13,6 +14,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.ServiceLoader;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -25,10 +27,12 @@ public final class PluginManager implements AutoCloseable {
     private final Map<String, PokeLitePlugin> plugins = new LinkedHashMap<>();
     private final Preferences preferences = Preferences.userRoot().node("dev/kspog/pokelite/plugins");
     private final Path externalPluginDirectory;
+    private final PluginContext pluginContext;
     private URLClassLoader externalClassLoader;
 
-    public PluginManager(Path externalPluginDirectory) {
+    public PluginManager(Path externalPluginDirectory, PluginContext pluginContext) {
         this.externalPluginDirectory = externalPluginDirectory.toAbsolutePath().normalize();
+        this.pluginContext = Objects.requireNonNull(pluginContext);
         register(new ClientStatusPlugin(this.externalPluginDirectory.getParent().resolve("poke")));
         loadClasspathPlugins();
         loadExternalPlugins();
@@ -65,9 +69,16 @@ public final class PluginManager implements AutoCloseable {
     }
 
     private void register(PokeLitePlugin plugin) {
-        PokeLitePlugin previous = plugins.putIfAbsent(plugin.getId(), plugin);
-        if (previous != null) {
+        if (plugins.containsKey(plugin.getId())) {
             LOGGER.warning("Ignoring duplicate plugin id: " + plugin.getId());
+            return;
+        }
+
+        try {
+            plugin.initialize(pluginContext);
+            plugins.put(plugin.getId(), plugin);
+        } catch (Exception error) {
+            LOGGER.log(Level.WARNING, "Unable to initialize plugin: " + plugin.getName(), error);
         }
     }
 

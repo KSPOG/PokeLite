@@ -4,16 +4,17 @@ PokeLite is a 100% Java 17 desktop shell that launches the official PokeMMO clie
 
 ## Current milestone
 
-The current client includes:
+The client currently includes:
 
-- a dark Swing desktop shell with a central game area;
-- a right-side RuneLite-style navigation rail;
-- collapsible Plugins, Settings, and Logs panels;
+- a dark Swing desktop shell with a central embedded game area;
+- a right-side navigation rail with vector Poké Ball, Plugins, Game Data, Settings, and Logs icons;
 - persistent plugin enable/disable state;
 - classpath and external JAR plugin discovery through `ServiceLoader`;
+- a public read-only `ClientApi`, `PluginContext`, event bus, typed client events, and capability model;
+- replaceable `GameDataProvider` support;
+- an optional calibrated screen-OCR provider for Money and Experience;
 - official PokeMMO process launching from `poke/`;
-- Windows child-window hosting and automatic resize through JNA;
-- safe separate-window fallback when embedding is unavailable.
+- Windows child-window hosting and automatic resize through JNA.
 
 ## Required local layout
 
@@ -50,7 +51,7 @@ Module classpath: PokeLite.main
 gradle run
 ```
 
-## External plugin contract
+## Plugin API
 
 External plugin JARs go in `plugins/` and implement:
 
@@ -58,10 +59,47 @@ External plugin JARs go in `plugins/` and implement:
 dev.kspog.pokelite.plugin.PokeLitePlugin
 ```
 
-Each plugin JAR must provide the matching `META-INF/services` provider entry.
+Each plugin JAR must provide a matching service-provider file:
+
+```text
+META-INF/services/dev.kspog.pokelite.plugin.PokeLitePlugin
+```
+
+Plugins receive their services during initialization:
+
+```java
+public final class SessionPlugin implements PokeLitePlugin {
+    private PluginContext context;
+    private EventBus.Subscription moneySubscription;
+
+    @Override
+    public void initialize(PluginContext context) {
+        this.context = context;
+        this.moneySubscription = context.events().subscribe(
+            ClientEvents.MoneyChanged.class,
+            event -> context.logger(getId()).info(
+                "Money changed: " + event.previous() + " -> " + event.current()
+            )
+        );
+    }
+
+    @Override
+    public void onDisable() {
+        if (moneySubscription != null) {
+            moneySubscription.close();
+        }
+    }
+}
+```
+
+Plugins should check `ClientApi.supports(ClientCapability)` before using optional data. This allows future official, log-based, or otherwise authorized providers to replace OCR without requiring plugin rewrites.
+
+## Optional OCR provider
+
+The Game Data panel can calibrate screen regions for Money and Experience and can invoke a locally installed Tesseract executable. OCR is optional and is isolated behind `GameDataProvider`; plugins do not depend on its implementation.
 
 ## Status
 
-This is still an early integration milestone. It provides the client shell and native Windows hosting layer, but it does not yet expose PokeMMO game state, game events, widgets, or automation APIs.
+The API currently exposes process state, provider capabilities, money snapshots, experience snapshots, session deltas, and typed change events. Additional game state will be added only when a reliable data provider is available.
 
 No PokeMMO game files, ROMs, credentials, or proprietary client assets are included.

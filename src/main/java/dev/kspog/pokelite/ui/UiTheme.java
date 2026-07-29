@@ -1,12 +1,15 @@
 package dev.kspog.pokelite.ui;
 
 import javax.swing.BorderFactory;
+import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.UIManager;
 import java.awt.Color;
 import java.awt.Cursor;
-import java.awt.Font;
+import java.awt.Dimension;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 public final class UiTheme {
     public static final Color BACKGROUND = new Color(24, 24, 24);
@@ -32,6 +35,9 @@ public final class UiTheme {
         UIManager.put("TextArea.background", BACKGROUND);
         UIManager.put("TextArea.foreground", TEXT);
         UIManager.put("TextArea.caretForeground", TEXT);
+        UIManager.put("TextField.background", BACKGROUND);
+        UIManager.put("TextField.foreground", TEXT);
+        UIManager.put("TextField.caretForeground", TEXT);
         UIManager.put("ToolTip.background", PANEL_ALT);
         UIManager.put("ToolTip.foreground", TEXT);
     }
@@ -47,12 +53,52 @@ public final class UiTheme {
         return button;
     }
 
-    public static JButton navigationButton(String text, String tooltip) {
-        JButton button = button(text);
+    public static JButton navigationButton(Icon icon, String tooltip) {
+        JButton button = new JButton(icon);
         button.setToolTipText(tooltip);
-        button.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
+        button.setForeground(MUTED_TEXT);
+        button.setBackground(NAVIGATION);
+        button.setOpaque(true);
+        button.setFocusPainted(false);
+        button.setContentAreaFilled(true);
         button.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER));
         button.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+        button.setPreferredSize(new Dimension(52, 48));
+        button.setMaximumSize(new Dimension(52, 48));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.putClientProperty("pokelite.selected", Boolean.FALSE);
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent event) {
+                if (!Boolean.TRUE.equals(button.getClientProperty("pokelite.selected"))) {
+                    button.setBackground(PANEL_ALT);
+                    button.setForeground(TEXT);
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent event) {
+                applyNavigationState(button);
+            }
+        });
         return button;
+    }
+
+    public static void setNavigationSelected(JButton button, boolean selected) {
+        button.putClientProperty("pokelite.selected", selected);
+        applyNavigationState(button);
+    }
+
+    private static void applyNavigationState(JButton button) {
+        boolean selected = Boolean.TRUE.equals(button.getClientProperty("pokelite.selected"));
+        button.setBackground(selected ? PANEL_ALT : NAVIGATION);
+        button.setForeground(selected ? ACCENT : MUTED_TEXT);
+        button.setBorder(selected
+            ? BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 3, 1, 0, ACCENT),
+                BorderFactory.createEmptyBorder(0, 0, 0, 3)
+            )
+            : BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER)
+        );
     }
 }
