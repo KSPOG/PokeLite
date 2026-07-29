@@ -1,0 +1,23 @@
+# Java build output
+*.class
+*.jar
+out/
+build/
+.gradle/
+
+# IDE files
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+
+# Logs
+*.log
+
+# Local PokeMMO installation and proprietary assets
+PokeMMO.exe
+PokeMMO.sh
+libs/
+roms/
+mods/
